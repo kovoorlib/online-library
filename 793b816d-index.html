@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ഓൺലൈൻ വായനശാല</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --text: #1f2933;
+    --muted: #697586;
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --green: #16a34a;
+    --green-dark: #15803d;
+    --border: #e3e8f0;
+    --shadow: 0 2px 10px rgba(15, 23, 42, .07);
+    --iw: 150px;           /* ഷെൽഫിലെ ഓരോ ഇനത്തിന്റെയും വീതി */
+  }
+  @media (max-width: 560px) { :root { --iw: 112px; } }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Noto Sans Malayalam", system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ---------- Header ---------- */
+  header {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb 60%, #0ea5e9);
+    color: #fff; text-align: center; padding: 36px 16px 70px;
+  }
+  header h1 { font-size: clamp(1.7rem, 5vw, 2.6rem); font-weight: 700; }
+  header p { opacity: .9; margin-top: 6px; }
+
+  main { max-width: 1150px; margin: -44px auto 40px; padding: 0 16px; }
+
+  /* ---------- Tabs ---------- */
+  .tabs { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+  .tab {
+    font-family: inherit; font-size: .98rem; font-weight: 500;
+    padding: 10px 20px; border: none; border-radius: 999px; cursor: pointer;
+    background: #fff; color: var(--text); box-shadow: var(--shadow); transition: .15s;
+  }
+  .tab:hover { transform: translateY(-1px); }
+  .tab.active { background: var(--primary); color: #fff; }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: 14px; margin-bottom: 14px; }
+  .toolbar-row { display: flex; gap: 10px; }
+  .search {
+    flex: 1; min-width: 0; font-family: inherit; font-size: 1rem;
+    padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px;
+    outline: none; background: #fbfcfe;
+  }
+  .search:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, .15); }
+  .view-toggle { display: flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; flex: none; }
+  .view-btn { font-family: inherit; border: none; background: #fff; padding: 0 14px; cursor: pointer; font-size: .9rem; color: var(--text); }
+  .view-btn.active { background: var(--primary); color: #fff; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .chips:empty { display: none; }
+  .chip {
+    font-family: inherit; font-size: .88rem; padding: 5px 14px;
+    border-radius: 999px; border: 1px solid var(--border);
+    background: #fff; color: var(--text); cursor: pointer; transition: .15s;
+  }
+  .chip:hover { border-color: var(--primary); color: var(--primary); }
+  .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .count { margin: 4px 4px 12px; color: var(--muted); font-size: .92rem; }
+
+  /* ---------- ഷെൽഫ് ---------- */
+  .shelf {
+    border: 8px solid #6f4320; border-top-width: 12px; border-radius: 12px;
+    overflow: hidden; background: #e9d9bd; box-shadow: 0 6px 18px rgba(60, 35, 10, .25);
+  }
+  .shelf-row {
+    display: flex; align-items: flex-start; gap: 16px; padding: 22px 16px 14px;
+    background: linear-gradient(180deg, #d4b98c 0%, #ead9ba 38%, #efe2c8 100%);
+    box-shadow: inset 0 12px 14px -10px rgba(0, 0, 0, .3);
+  }
+  .plank {
+    height: 15px; background: linear-gradient(#b8843f, #8a5a2b);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, .28);
+  }
+  .item { width: var(--iw); flex: none; cursor: pointer; transition: transform .15s; outline: none; }
+  .item:hover, .item:focus-visible { transform: translateY(-6px); }
+  .spine-cover {
+    width: var(--iw); aspect-ratio: 5 / 7; position: relative; overflow: hidden;
+    border-radius: 3px 9px 9px 3px; color: #fff;
+    box-shadow: 3px 5px 11px rgba(0, 0, 0, .38);
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 12px 10px 10px 18px;
+  }
+  .spine-cover::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 9px; z-index: 2;
+    background: linear-gradient(90deg, rgba(0,0,0,.3), rgba(255,255,255,.2) 60%, rgba(0,0,0,.04));
+  }
+  .spine-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .cover-title {
+    font-weight: 700; font-size: .98rem; line-height: 1.35; text-shadow: 0 1px 2px rgba(0,0,0,.35);
+    display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .cover-author { font-size: .76rem; opacity: .92; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .item-caption {
+    margin-top: 9px; font-size: .82rem; font-weight: 500; color: #4a3520; text-align: center; line-height: 1.35;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+
+  /* ---------- ലിസ്റ്റ് കാർഡുകൾ ---------- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+  .book { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column; }
+  .book-title { font-size: 1.12rem; font-weight: 700; color: var(--primary-dark); line-height: 1.4; }
+  .meta { margin-top: 8px; font-size: .93rem; color: var(--muted); }
+  .meta b { color: var(--text); font-weight: 500; }
+  .tag {
+    display: inline-block; margin-top: 8px; margin-right: 6px; padding: 2px 12px; font-size: .8rem;
+    background: #e8f0fe; color: var(--primary-dark); border-radius: 999px;
+  }
+  .desc { margin-top: 10px; font-size: .93rem; color: #3e4c59; flex: 1; }
+  .read-btn {
+    display: block; text-align: center; text-decoration: none;
+    font-family: inherit; font-size: 1rem; width: 100%; border: none; cursor: pointer;
+    margin-top: 16px; background: var(--green); color: #fff; padding: 10px;
+    border-radius: 10px; font-weight: 500; transition: .15s;
+  }
+  .read-btn:hover { background: var(--green-dark); }
+  .read-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+
+  /* ---------- Modals ---------- */
+  .modal {
+    position: fixed; inset: 0; background: rgba(15, 23, 42, .82);
+    display: none; align-items: center; justify-content: center; padding: 2vh 2vw;
+  }
+  .modal.open { display: flex; }
+  #detail-modal { z-index: 900; }
+  #reader-modal { z-index: 1000; }
+  .detail {
+    background: #fff; border-radius: 16px; padding: 26px 24px 24px; width: 100%; max-width: 480px;
+    max-height: 90vh; overflow: auto; position: relative;
+  }
+  .detail h2 { font-size: 1.35rem; color: var(--primary-dark); padding-right: 90px; line-height: 1.4; }
+  .detail .close-btn { position: absolute; top: 16px; right: 16px; }
+  .reader {
+    width: 100%; height: 100%; max-width: 1200px; background: #fff;
+    border-radius: 14px; overflow: hidden; display: flex; flex-direction: column;
+  }
+  .reader-bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: #f1f5fd; border-bottom: 1px solid var(--border); }
+  .reader-title { flex: 1; font-weight: 700; color: var(--primary-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .reader-ext { font-size: .85rem; color: var(--primary); text-decoration: none; white-space: nowrap; }
+  .reader-ext:hover { text-decoration: underline; }
+  .close-btn {
+    font-family: inherit; background: #dc2626; color: #fff; border: none;
+    padding: 6px 14px; border-radius: 8px; cursor: pointer; font-weight: 700;
+  }
+  .close-btn:hover { background: #b91c1c; }
+  .reader iframe { flex: 1; width: 100%; border: none; }
+
+  /* ---------- PDF പുസ്തക റീഡർ ---------- */
+  .pdf-modal {
+    position: fixed; inset: 0; z-index: 1100; display: none; flex-direction: column;
+    background: radial-gradient(ellipse at center, #4a3420 0%, #22160c 100%); color: #f3e6d0;
+  }
+  .pdf-modal.open { display: flex; }
+  .pdf-bar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 8px 12px; background: rgba(0, 0, 0, .42);
+  }
+  .pdf-title { flex: 1 1 160px; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pdf-ctrl { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .pdf-ctrl button, .pdf-dl {
+    font-family: inherit; font-size: 1rem; line-height: 1.4; text-decoration: none;
+    background: rgba(255, 255, 255, .13); color: #f3e6d0; border: none;
+    border-radius: 8px; padding: 5px 11px; cursor: pointer;
+  }
+  .pdf-ctrl button:hover, .pdf-dl:hover { background: rgba(255, 255, 255, .24); }
+  .pdf-ctrl button:disabled { opacity: .4; cursor: default; }
+  #pdf-jump { width: 72px; font-family: inherit; padding: 5px 8px; border: none; border-radius: 8px; background: rgba(255, 255, 255, .92); color: #1f2933; }
+  .pdf-pos { min-width: 84px; text-align: center; font-size: .9rem; }
+  .pdf-body { position: relative; flex: 1; min-height: 0; }
+  .pdf-stage { position: absolute; inset: 0; overflow: auto; display: flex; padding: 12px; }
+  .pdf-spread { margin: auto; flex: none; position: relative; display: flex; box-shadow: 0 10px 40px rgba(0, 0, 0, .55); }
+  .pdf-spread canvas { display: block; background: #fff; }
+  .pdf-spread.double::after {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 46px;
+    transform: translateX(-50%); pointer-events: none;
+    background: linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,.24) 50%, rgba(0,0,0,0));
+  }
+  .pdf-spread.turn-next { animation: turnNext .28s ease; }
+  .pdf-spread.turn-prev { animation: turnPrev .28s ease; }
+  @keyframes turnNext { from { opacity: .15; transform: translateX(26px); } to { opacity: 1; transform: none; } }
+  @keyframes turnPrev { from { opacity: .15; transform: translateX(-26px); } to { opacity: 1; transform: none; } }
+  .pdf-edge {
+    position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
+    width: 42px; height: 84px; border: none; border-radius: 10px; cursor: pointer;
+    background: rgba(0, 0, 0, .3); color: #fff; font-size: 2rem; line-height: 1;
+  }
+  .pdf-edge:hover { background: rgba(0, 0, 0, .55); }
+  .pdf-edge.left { left: 6px; }
+  .pdf-edge.right { right: 6px; }
+  .pdf-edge:disabled { opacity: 0; pointer-events: none; }
+  .pdf-msg {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 24px; pointer-events: none; font-size: 1.05rem;
+  }
+  .pdf-msg a { pointer-events: auto; color: #9cc9ff; margin-left: 6px; }
+  .pdf-progress { height: 4px; background: rgba(255, 255, 255, .12); }
+  #pdf-progress-bar { height: 100%; width: 0; background: #f0b429; transition: width .25s; }
+  @media (max-width: 560px) { .pdf-edge { width: 32px; height: 64px; font-size: 1.5rem; } }
+
+  /* ---------- Members table ---------- */
+  .table-wrap { background: var(--card); border-radius: 14px; box-shadow: var(--shadow); overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 480px; }
+  th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: .95rem; }
+  th { background: #f1f5fd; color: var(--primary-dark); font-weight: 700; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #f8faff; }
+  .status { display: inline-block; padding: 2px 12px; border-radius: 999px; font-size: .82rem; font-weight: 700; background: #dcfce7; color: #166534; }
+  .status.off { background: #fee2e2; color: #991b1b; }
+
+  /* ---------- States ---------- */
+  .state { text-align: center; padding: 50px 16px; color: var(--muted); }
+  .spinner {
+    width: 38px; height: 38px; margin: 0 auto 12px; border-radius: 50%;
+    border: 4px solid #dbe4f5; border-top-color: var(--primary); animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error { color: #b42318; }
+
+  footer { text-align: center; color: var(--muted); font-size: .85rem; padding: 0 16px 28px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📚 ഓൺലൈൻ വായനശാല</h1>
+  <p>വായിക്കാം, വളരാം</p>
+</header>
+
+<main>
+  <div class="tabs" id="tabs"></div>
+  <div id="sections"></div>
+
+  <!-- അംഗങ്ങൾ -->
+  <section id="sec-members" class="hidden">
+    <div class="toolbar">
+      <div class="toolbar-row">
+        <input id="member-search" class="search" type="search" placeholder="🔍 അംഗങ്ങളെ തിരയുക...">
+      </div>
+    </div>
+    <div id="member-count" class="count"></div>
+    <div id="member-wrap" class="table-wrap hidden">
+      <table>
+        <thead>
+          <tr><th>അംഗത്വ നമ്പർ</th><th>പേര്</th><th>ചേർന്ന തീയതി</th><th>നില</th></tr>
+        </thead>
+        <tbody id="member-body"></tbody>
+      </table>
+    </div>
+    <div id="member-state" class="state"><div class="spinner"></div>അംഗങ്ങളുടെ വിവരങ്ങൾ ലോഡ് ചെയ്യുന്നു...</div>
+  </section>
+</main>
+
+<footer>© ഓൺലൈൻ വായനശാല</footer>
+
+<!-- വിവര ജാലകം -->
+<div id="detail-modal" class="modal">
+  <div class="detail" role="dialog" aria-modal="true">
+    <button class="close-btn" id="close-detail">✕ അടയ്ക്കുക</button>
+    <h2 id="d-title"></h2>
+    <p class="meta" id="d-author"></p>
+    <div id="d-tags"></div>
+    <p class="desc" id="d-desc"></p>
+    <div id="d-action"></div>
+  </div>
+</div>
+
+<!-- PDF പുസ്തക റീഡർ -->
+<div id="pdf-modal" class="pdf-modal">
+  <div class="pdf-bar">
+    <div id="pdf-title" class="pdf-title"></div>
+    <div class="pdf-ctrl">
+      <button id="pdf-prev" title="മുമ്പത്തെ പേജ്">‹</button>
+      <span id="pdf-pos" class="pdf-pos"></span>
+      <button id="pdf-next" title="അടുത്ത പേജ്">›</button>
+      <input id="pdf-jump" type="number" min="1" inputmode="numeric" placeholder="പേജ്" title="പേജ് നമ്പർ അടിച്ച് Enter">
+      <button id="pdf-zoom-out" title="ചെറുതാക്കുക">−</button>
+      <button id="pdf-zoom-in" title="വലുതാക്കുക">+</button>
+      <button id="pdf-mode"></button>
+      <button id="pdf-full" title="ഫുൾ സ്ക്രീൻ">⛶</button>
+      <a id="pdf-dl" class="pdf-dl" download title="ഡൗൺലോഡ് ചെയ്യുക">⬇</a>
+    </div>
+    <button class="close-btn" id="pdf-close">✕ അടയ്ക്കുക</button>
+  </div>
+  <div class="pdf-body">
+    <div id="pdf-stage" class="pdf-stage"><div id="pdf-spread" class="pdf-spread"></div></div>
+    <button class="pdf-edge left" id="pdf-edge-prev" aria-label="മുമ്പത്തെ പേജ്">‹</button>
+    <button class="pdf-edge right" id="pdf-edge-next" aria-label="അടുത്ത പേജ്">›</button>
+    <div id="pdf-msg" class="pdf-msg hidden"></div>
+  </div>
+  <div class="pdf-progress"><div id="pdf-progress-bar"></div></div>
+</div>
+
+<!-- ഇ-ബുക്ക് റീഡർ (archive.org) -->
+<div id="reader-modal" class="modal">
+  <div class="reader" role="dialog" aria-modal="true">
+    <div class="reader-bar">
+      <div id="reader-title" class="reader-title"></div>
+      <a id="reader-ext" class="reader-ext" target="_blank" rel="noopener noreferrer">archive.org-ൽ തുറക്കുക ↗</a>
+      <button class="close-btn" id="close-reader">✕ അടയ്ക്കുക</button>
+    </div>
+    <iframe id="book-frame" src="" allowfullscreen></iframe>
+  </div>
+</div>
+
+<script>
+/* ======================================================
+   ഷെൽഫുകൾ: ഓരോന്നിനും ഒരു CSV ഫയൽ (ഇതേ റെപ്പോയിൽ).
+   optional: true ആണെങ്കിൽ ഫയൽ ഇല്ലെങ്കിൽ "ഒന്നും ചേർത്തിട്ടില്ല" എന്ന് കാണിക്കും.
+   ====================================================== */
+const COLLECTIONS = [
+  { id: "books",      tab: "📖 പുസ്തകങ്ങൾ", url: "books.csv",      noun: "പുസ്തകങ്ങൾ", authorLabel: "രചയിതാവ്",  placeholder: "പുസ്തകത്തിന്റെ പേര്, രചയിതാവ്, വിഭാഗം എന്നിവ തിരയുക...", optional: false },
+  { id: "magazines",  tab: "📰 മാഗസിനുകൾ", url: "magazines.csv",  noun: "മാഗസിനുകൾ", authorLabel: "പ്രസാധകർ", placeholder: "മാഗസിന്റെ പേര്, പ്രസാധകർ, വിഭാഗം എന്നിവ തിരയുക...",   optional: true },
+  { id: "newspapers", tab: "🗞️ പത്രങ്ങൾ",   url: "newspapers.csv", noun: "പത്രങ്ങൾ",   authorLabel: "പ്രസാധകർ", placeholder: "പത്രത്തിന്റെ പേര്, ഭാഷ എന്നിവ തിരയുക...",              optional: true },
+];
+const MEMBERS_URL = "members.csv";
+
+/* തലക്കെട്ടിലെ വാക്ക് (വലിയ/ചെറിയ അക്ഷരം പ്രശ്നമല്ല) നോക്കി കോളം കണ്ടെത്തും.
+   കിട്ടിയില്ലെങ്കിൽ fallback സ്ഥാനം എടുക്കും (-1 = ഇല്ല). */
+const FIELDS = [
+  { key: "title",    keys: ["title", "പുസ്തക", "തലക്കെട്ട്", "പേര്", "name"],            fallback: 0 },
+  { key: "author",   keys: ["author", "writer", "publisher", "രചയിതാവ്", "പ്രസാധക"],      fallback: 1 },
+  { key: "category", keys: ["category", "genre", "language", "വിഭാഗം", "ഭാഷ"],            fallback: 2 },
+  { key: "issue",    keys: ["issue", "edition", "date", "ലക്കം", "തീയതി"],               fallback: -1 },
+  { key: "desc",     keys: ["description", "desc", "about", "summary", "വിവരണം"],        fallback: 3 },
+  { key: "cover",    keys: ["cover", "image", "img", "ചിത്ര"],                           fallback: -1 },
+  { key: "archive",  keys: ["archive", "identifier", "pdf", "file", "link", "url", "ലിങ്ക്", "ഫയൽ"],           fallback: 4 },
+];
+const MEMBER_FIELDS = [
+  { key: "id",     keys: ["member_id", "member", "അംഗത്വ", "നമ്പർ"], fallback: 0 },
+  { key: "name",   keys: ["name", "പേര്"],                          fallback: 1 },
+  { key: "date",   keys: ["join", "date", "തീയതി"],                 fallback: 2 },
+  { key: "status", keys: ["status", "നില"],                         fallback: 3 },
+];
+
+/* ---------- CSV parser (quotes, commas, new lines) ---------- */
+function parseCSV(text) {
+  text = text.replace(/^\uFEFF/, "");
+  const rows = [];
+  let row = [], cell = "", inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { cell += '"'; i++; }
+        else inQuotes = false;
+      } else cell += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ",") { row.push(cell); cell = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(cell); cell = "";
+      rows.push(row); row = [];
+    } else cell += c;
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(x => String(x).trim() !== ""));
+}
+
+async function loadCSV(url) {
+  const res = await fetch(url + "?t=" + Date.now());
+  if (!res.ok) { const e = new Error(url + " ലോഡ് ചെയ്യാൻ പറ്റിയില്ല (" + res.status + ")"); e.status = res.status; throw e; }
+  return parseCSV(await res.text());
+}
+
+/* ---------- Helpers ---------- */
+const $ = id => document.getElementById(id);
+const clean = v => (v == null ? "" : String(v).trim());
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function hueFor(str) {
+  let h = 0;
+  for (const ch of str) h = (h * 31 + ch.codePointAt(0)) % 360;
+  return h;
+}
+
+function safeUrl(u) {
+  u = clean(u);
+  if (!u) return "";
+  if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+  try { const p = new URL(u); return /^https?:$/.test(p.protocol) ? p.href : ""; }
+  catch { return ""; }
+}
+
+/* archive.org ഐഡി അല്ലെങ്കിൽ archive.org ലിങ്ക് → ഐഡി; മറ്റൊന്നും അല്ലെങ്കിൽ "" */
+function archiveIdOf(v) {
+  v = clean(v);
+  const m = v.match(/archive\.org\/(?:details|embed|stream)\/([^\/?#\s]+)/i);
+  if (m) return m[1];
+  return /^[A-Za-z0-9_-]+$/.test(v) ? v : "";
+}
+
+function mapRows(rows, fields) {
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => clean(h).toLowerCase());
+  const used = new Set();
+  const idx = {};
+  fields.forEach(f => {
+    let i = headers.findIndex((h, n) => !used.has(n) && f.keys.some(k => h.includes(k)));
+    if (i < 0 && f.fallback >= 0 && f.fallback < headers.length && !used.has(f.fallback)) i = f.fallback;
+    if (i >= 0) used.add(i);
+    idx[f.key] = i;
+  });
+  return rows.slice(1).map(r => {
+    const o = {};
+    fields.forEach(f => { o[f.key] = idx[f.key] >= 0 ? clean(r[idx[f.key]]) : ""; });
+    return o;
+  });
+}
+
+/* ======================================================
+   ഷെൽഫ് വിഭാഗങ്ങൾ (പുസ്തകം / മാഗസിൻ / പത്രം)
+   ====================================================== */
+const S = {};   // ഓരോ ഷെൽഫിന്റെയും അവസ്ഥ
+let currentTab = COLLECTIONS[0].id;
+
+function buildUI() {
+  const tabs = $("tabs"), sections = $("sections");
+
+  COLLECTIONS.forEach((c, n) => {
+    S[c.id] = { items: [], loaded: false, category: "എല്ലാം", view: "shelf" };
+
+    const b = el("button", "tab" + (n === 0 ? " active" : ""), c.tab);
+    b.dataset.tab = c.id;
+    tabs.appendChild(b);
+
+    const sec = document.createElement("section");
+    sec.id = "sec-" + c.id;
+    if (n !== 0) sec.className = "hidden";
+    sec.innerHTML = `
+      <div class="toolbar">
+        <div class="toolbar-row">
+          <input id="q-${c.id}" class="search" type="search">
+          <div class="view-toggle">
+            <button class="view-btn active" data-view="shelf">🗄️ ഷെൽഫ്</button>
+            <button class="view-btn" data-view="list">☰ പട്ടിക</button>
+          </div>
+        </div>
+        <div id="chips-${c.id}" class="chips"></div>
+      </div>
+      <div id="count-${c.id}" class="count"></div>
+      <div id="box-${c.id}"></div>
+      <div id="state-${c.id}" class="state"><div class="spinner"></div>${c.noun} ലോഡ് ചെയ്യുന്നു...</div>`;
+    sections.appendChild(sec);
+
+    $("q-" + c.id).placeholder = "🔍 " + c.placeholder;
+    $("q-" + c.id).addEventListener("input", () => render(c));
+    sec.querySelectorAll(".view-btn").forEach(vb => {
+      vb.onclick = () => {
+        S[c.id].view = vb.dataset.view;
+        sec.querySelectorAll(".view-btn").forEach(x => x.classList.toggle("active", x === vb));
+        render(c);
+      };
+    });
+  });
+
+  const mb = el("button", "tab", "👥 അംഗങ്ങൾ");
+  mb.dataset.tab = "members";
+  tabs.appendChild(mb);
+
+  tabs.querySelectorAll(".tab").forEach(btn => {
+    btn.onclick = () => {
+      currentTab = btn.dataset.tab;
+      tabs.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t === btn));
+      COLLECTIONS.forEach(c => $("sec-" + c.id).classList.toggle("hidden", c.id !== currentTab));
+      $("sec-members").classList.toggle("hidden", currentTab !== "members");
+      const c = COLLECTIONS.find(x => x.id === currentTab);
+      if (c) render(c);
+    };
+  });
+}
+
+function renderChips(c) {
+  const s = S[c.id], box = $("chips-" + c.id);
+  box.textContent = "";
+  const cats = ["എല്ലാം", ...new Set(s.items.map(i => i.category).filter(Boolean))];
+  if (cats.length <= 2) return;
+  cats.forEach(cat => {
+    const b = el("button", "chip" + (cat === s.category ? " active" : ""), cat);
+    b.onclick = () => { s.category = cat; renderChips(c); render(c); };
+    box.appendChild(b);
+  });
+}
+
+function makeCover(item) {
+  const hue = hueFor(item.title);
+  const cv = el("div", "spine-cover");
+  cv.style.background = `linear-gradient(135deg, hsl(${hue},62%,40%), hsl(${(hue + 45) % 360},68%,52%))`;
+
+  function fillText() {
+    cv.appendChild(el("div", "cover-title", item.title));
+    if (item.author) cv.appendChild(el("div", "cover-author", item.author));
+  }
+  const coverUrl = safeUrl(item.cover);
+  if (coverUrl) {
+    const img = document.createElement("img");
+    img.src = coverUrl; img.alt = ""; img.loading = "lazy";
+    img.onerror = () => { img.remove(); fillText(); };
+    cv.appendChild(img);
+  } else fillText();
+  return cv;
+}
+
+function actionButton(item) {
+  const pdf = pdfUrlOf(item.archive);
+  if (pdf) {
+    const b = el("button", "read-btn", "ഇവിടെ വായിക്കുക 📖");
+    b.onclick = () => openPdf(pdf, item.title);
+    return b;
+  }
+  const id = archiveIdOf(item.archive);
+  if (id) {
+    const b = el("button", "read-btn", "ഇവിടെ വായിക്കുക 📖");
+    b.onclick = () => openReader(id, item.title);
+    return b;
+  }
+  const url = safeUrl(item.archive);
+  if (url) {
+    const a = el("a", "read-btn", "തുറക്കുക ↗");
+    a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer";
+    return a;
+  }
+  const b = el("button", "read-btn", "വായിക്കാൻ ലഭ്യമല്ല");
+  b.disabled = true;
+  return b;
+}
+
+function renderShelf(box, list, c) {
+  const shelf = el("div", "shelf");
+  box.appendChild(shelf);
+
+  const iw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--iw")) || 150;
+  const gap = 16, pad = 16;
+  const inner = shelf.clientWidth - pad * 2;
+  const perRow = inner > 0 ? Math.max(1, Math.floor((inner + gap) / (iw + gap))) : 4;
+
+  for (let i = 0; i < list.length; i += perRow) {
+    const row = el("div", "shelf-row");
+    list.slice(i, i + perRow).forEach(item => {
+      const it = el("div", "item");
+      it.tabIndex = 0;
+      it.setAttribute("role", "button");
+      it.title = item.title;
+      it.appendChild(makeCover(item));
+      it.appendChild(el("div", "item-caption", item.title));
+      it.onclick = () => openDetail(item, c);
+      it.onkeydown = e => { if (e.key === "Enter") openDetail(item, c); };
+      row.appendChild(it);
+    });
+    shelf.appendChild(row);
+    shelf.appendChild(el("div", "plank"));
+  }
+}
+
+function renderList(box, list, c) {
+  const grid = el("div", "grid");
+  list.forEach(item => {
+    const card = el("article", "book");
+    card.appendChild(el("h3", "book-title", item.title));
+    if (item.author) {
+      const m = el("p", "meta");
+      m.appendChild(el("b", null, c.authorLabel + ": "));
+      m.appendChild(document.createTextNode(item.author));
+      card.appendChild(m);
+    }
+    const tags = el("div");
+    if (item.category) tags.appendChild(el("span", "tag", item.category));
+    if (item.issue) tags.appendChild(el("span", "tag", item.issue));
+    card.appendChild(tags);
+    if (item.desc) card.appendChild(el("p", "desc", item.desc));
+    card.appendChild(actionButton(item));
+    grid.appendChild(card);
+  });
+  box.appendChild(grid);
+}
+
+function render(c) {
+  const s = S[c.id];
+  if (!s.loaded) return;
+
+  const q = clean($("q-" + c.id).value).toLowerCase();
+  const list = s.items.filter(i =>
+    (s.category === "എല്ലാം" || i.category === s.category) &&
+    (!q || [i.title, i.author, i.category, i.issue, i.desc].some(x => x.toLowerCase().includes(q)))
+  );
+
+  $("count-" + c.id).textContent = list.length + " " + c.noun;
+  const box = $("box-" + c.id);
+  box.textContent = "";
+  const state = $("state-" + c.id);
+
+  if (!list.length) {
+    state.classList.remove("hidden", "error");
+    state.textContent = s.items.length ? "😕 ഒന്നും കണ്ടില്ല." : "📭 ഈ ഷെൽഫിൽ ഇതുവരെ ഒന്നും ചേർത്തിട്ടില്ല.";
+    return;
+  }
+  state.classList.add("hidden");
+  if (s.view === "shelf") renderShelf(box, list, c); else renderList(box, list, c);
+}
+
+async function initCollection(c) {
+  const s = S[c.id];
+  try {
+    s.items = mapRows(await loadCSV(c.url), FIELDS).filter(i => i.title);
+  } catch (e) {
+    if (!(c.optional && e.status === 404)) {
+      const st = $("state-" + c.id);
+      st.classList.remove("hidden"); st.classList.add("error");
+      st.textContent = "⚠️ " + e.message;
+      return;
+    }
+    s.items = [];
+  }
+  s.loaded = true;
+  renderChips(c);
+  render(c);
+}
+
+/* ======================================================
+   വിവര ജാലകം & റീഡർ
+   ====================================================== */
+function openDetail(item, c) {
+  $("d-title").textContent = item.title;
+  const a = $("d-author");
+  a.textContent = "";
+  if (item.author) {
+    a.appendChild(el("b", null, c.authorLabel + ": "));
+    a.appendChild(document.createTextNode(item.author));
+  }
+  const tags = $("d-tags");
+  tags.textContent = "";
+  if (item.category) tags.appendChild(el("span", "tag", item.category));
+  if (item.issue) tags.appendChild(el("span", "tag", item.issue));
+  $("d-desc").textContent = item.desc;
+  const act = $("d-action");
+  act.textContent = "";
+  act.appendChild(actionButton(item));
+  $("detail-modal").classList.add("open");
+}
+function closeDetail() { $("detail-modal").classList.remove("open"); }
+
+function openReader(id, title) {
+  $("reader-title").textContent = title || "";
+  $("reader-ext").href = "https://archive.org/details/" + encodeURIComponent(id);
+  $("book-frame").src = "https://archive.org/embed/" + encodeURIComponent(id) + "?ui=embed";
+  $("reader-modal").classList.add("open");
+}
+function closeReader() {
+  $("book-frame").src = "";
+  $("reader-modal").classList.remove("open");
+}
+
+$("close-detail").onclick = closeDetail;
+$("close-reader").onclick = closeReader;
+$("detail-modal").addEventListener("click", e => { if (e.target.id === "detail-modal") closeDetail(); });
+$("reader-modal").addEventListener("click", e => { if (e.target.id === "reader-modal") closeReader(); });
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if ($("pdf-modal").classList.contains("open")) { closePdf(); return; }
+  if ($("reader-modal").classList.contains("open")) closeReader(); else closeDetail();
+});
+
+/* ======================================================
+   അംഗങ്ങൾ
+   ====================================================== */
+let members = [];
+
+function renderMembers() {
+  const q = clean($("member-search").value).toLowerCase();
+  const list = members.filter(m => !q || Object.values(m).some(x => x.toLowerCase().includes(q)));
+  $("member-count").textContent = list.length + " അംഗങ്ങൾ";
+
+  const body = $("member-body");
+  body.textContent = "";
+  if (!list.length) {
+    $("member-wrap").classList.add("hidden");
+    const s = $("member-state");
+    s.classList.remove("hidden", "error");
+    s.textContent = "😕 അംഗങ്ങളെ കണ്ടില്ല.";
+    return;
+  }
+  $("member-state").classList.add("hidden");
+  $("member-wrap").classList.remove("hidden");
+
+  list.forEach(m => {
+    const tr = document.createElement("tr");
+    tr.appendChild(el("td", null, m.id));
+    tr.appendChild(el("td", null, m.name));
+    tr.appendChild(el("td", null, m.date));
+    const td = document.createElement("td");
+    if (m.status) {
+      const inactive = /inactive|expired|block|അല്ല|റദ്ദ്/i.test(m.status);
+      td.appendChild(el("span", "status" + (inactive ? " off" : ""), m.status));
+    }
+    tr.appendChild(td);
+    body.appendChild(tr);
+  });
+}
+
+async function initMembers() {
+  try {
+    members = mapRows(await loadCSV(MEMBERS_URL), MEMBER_FIELDS).filter(m => m.id || m.name);
+    renderMembers();
+  } catch (e) {
+    const s = $("member-state");
+    s.classList.remove("hidden"); s.classList.add("error");
+    s.textContent = "⚠️ " + e.message;
+  }
+}
+$("member-search").addEventListener("input", renderMembers);
+
+/* ======================================================
+   തുടക്കം
+   ====================================================== */
+/* ======================================================
+   PDF പുസ്തക റീഡർ (PDF.js) — പേജ് മറിച്ച് വായിക്കാം
+   ഷീറ്റിലെ ലിങ്ക് കോളത്തിൽ .pdf ഫയൽ ഉണ്ടെങ്കിൽ ഇത് തുറക്കും.
+   ====================================================== */
+const PDFJS_BASE = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+let pdfjsPromise = null;
+
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (!pdfjsPromise) {
+    pdfjsPromise = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = PDFJS_BASE + "pdf.min.js";
+      s.onload = () => {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_BASE + "pdf.worker.min.js";
+        resolve(window.pdfjsLib);
+      };
+      s.onerror = () => { pdfjsPromise = null; reject(new Error("PDF വ്യൂവർ ലോഡ് ചെയ്യാൻ പറ്റിയില്ല")); };
+      document.head.appendChild(s);
+    });
+  }
+  return pdfjsPromise;
+}
+
+/* ലിങ്ക് .pdf-ൽ അവസാനിക്കുന്നുണ്ടെങ്കിൽ പൂർണ്ണ URL തരും.
+   ഫോൾഡർ ഇല്ലാതെ ഫയൽ പേര് മാത്രം ആണെങ്കിൽ books/ ഫോൾഡറിൽ നോക്കും. */
+function pdfUrlOf(v) {
+  v = clean(v);
+  if (!/\.pdf(\?[^#]*)?(#.*)?$/i.test(v)) return "";
+  if (/^https?:\/\//i.test(v)) return v;
+  v = v.replace(/^\/+/, "");
+  if (v.indexOf("/") === -1) v = "books/" + v;
+  try { return new URL(v, location.href).href; } catch { return ""; }
+}
+
+const PR = { pdf: null, n: 0, spreads: [], idx: 0, zoom: 1, dbl: false, manual: false, token: 0, openId: 0, tasks: [], url: "" };
+const pdfOpenNow = () => $("pdf-modal").classList.contains("open");
+const autoDouble = () => window.innerWidth >= 900 && window.innerWidth > window.innerHeight * 1.1;
+
+function safeDecode(s) { try { return decodeURI(s); } catch { return s; } }
+
+function pdfMsg(text, link) {
+  const m = $("pdf-msg");
+  m.textContent = text || "";
+  if (text && link) {
+    const a = el("a", null, "പുതിയ ടാബിൽ തുറക്കുക ↗");
+    a.href = link; a.target = "_blank"; a.rel = "noopener noreferrer";
+    m.appendChild(a);
+  }
+  m.classList.toggle("hidden", !text);
+}
+
+function buildSpreads() {
+  const n = PR.n, sp = [];
+  if (!PR.dbl) { for (let p = 1; p <= n; p++) sp.push([p]); }
+  else { sp.push([1]); for (let p = 2; p <= n; p += 2) sp.push(p + 1 <= n ? [p, p + 1] : [p]); }
+  PR.spreads = sp;
+}
+
+function updateModeBtn() {
+  $("pdf-mode").textContent = PR.dbl ? "📄 ഒറ്റ പേജ്" : "📖 ഇരട്ട പേജ്";
+}
+
+function pdfSavePage(p) { try { localStorage.setItem("vp:" + PR.url, String(p)); } catch (e) {} }
+function pdfLoadPage() { try { return parseInt(localStorage.getItem("vp:" + PR.url), 10) || 1; } catch (e) { return 1; } }
+
+async function showSpread(i, dir) {
+  if (!PR.pdf) return;
+  i = Math.max(0, Math.min(PR.spreads.length - 1, i));
+  const token = ++PR.token;
+  PR.tasks.forEach(t => { try { t.cancel(); } catch (e) {} });
+  PR.tasks = [];
+  const pages = PR.spreads[i];
+  try {
+    const pgs = await Promise.all(pages.map(p => PR.pdf.getPage(p)));
+    if (token !== PR.token) return;
+    const stage = $("pdf-stage");
+    const availW = Math.max(100, stage.clientWidth - 24);
+    const availH = Math.max(100, stage.clientHeight - 24);
+    const base = pgs[0].getViewport({ scale: 1 });
+    const fit = Math.min((availW / pgs.length) / base.width, availH / base.height);
+    const scale = Math.max(0.1, fit) * PR.zoom;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    const parts = pgs.map(pg => {
+      const vp = pg.getViewport({ scale });
+      const cv = document.createElement("canvas");
+      cv.width = Math.floor(vp.width * dpr);
+      cv.height = Math.floor(vp.height * dpr);
+      cv.style.width = Math.floor(vp.width) + "px";
+      cv.style.height = Math.floor(vp.height) + "px";
+      const task = pg.render({ canvasContext: cv.getContext("2d"), viewport: pg.getViewport({ scale: scale * dpr }) });
+      PR.tasks.push(task);
+      return { cv, task };
+    });
+    await Promise.all(parts.map(x => x.task.promise));
+    if (token !== PR.token) return;
+
+    const sp = $("pdf-spread");
+    sp.replaceChildren(...parts.map(x => x.cv));
+    sp.classList.toggle("double", pages.length === 2);
+    sp.classList.remove("turn-next", "turn-prev");
+    if (dir) { void sp.offsetWidth; sp.classList.add(dir > 0 ? "turn-next" : "turn-prev"); }
+    stage.scrollTo(0, 0);
+
+    PR.idx = i;
+    const last = pages[pages.length - 1];
+    $("pdf-pos").textContent = (pages.length === 2 ? pages[0] + "–" + pages[1] : pages[0]) + " / " + PR.n;
+    $("pdf-prev").disabled = $("pdf-edge-prev").disabled = i === 0;
+    $("pdf-next").disabled = $("pdf-edge-next").disabled = i >= PR.spreads.length - 1;
+    $("pdf-progress-bar").style.width = (last / PR.n * 100) + "%";
+    pdfSavePage(pages[0]);
+  } catch (e) {
+    if (e && e.name === "RenderingCancelledException") return;
+    pdfMsg("⚠️ പേജ് കാണിക്കാൻ പറ്റിയില്ല.");
+  }
+}
+
+function pdfStep(d) {
+  const t = PR.idx + d;
+  if (t < 0 || t >= PR.spreads.length) return;
+  showSpread(t, d);
+}
+
+function pdfGoto(p) {
+  p = Math.max(1, Math.min(PR.n, p | 0));
+  const i = PR.spreads.findIndex(s => s.includes(p));
+  showSpread(i < 0 ? 0 : i, i > PR.idx ? 1 : -1);
+}
+
+function pdfSetMode(dbl) {
+  const cur = PR.spreads[PR.idx] ? PR.spreads[PR.idx][0] : 1;
+  PR.dbl = dbl;
+  buildSpreads();
+  updateModeBtn();
+  const i = PR.spreads.findIndex(s => s.includes(cur));
+  showSpread(i < 0 ? 0 : i, 0);
+}
+
+function pdfOnResize() {
+  if (!pdfOpenNow() || !PR.pdf) return;
+  if (!PR.manual && autoDouble() !== PR.dbl) { pdfSetMode(autoDouble()); return; }
+  showSpread(PR.idx, 0);
+}
+
+function resetPdf() {
+  PR.tasks.forEach(t => { try { t.cancel(); } catch (e) {} });
+  PR.tasks = [];
+  if (PR.pdf) { try { PR.pdf.destroy(); } catch (e) {} PR.pdf = null; }
+}
+
+async function openPdf(url, title) {
+  const id = ++PR.openId;
+  resetPdf();
+  PR.url = url; PR.zoom = 1; PR.manual = false; PR.idx = 0; PR.n = 0; PR.spreads = [];
+  $("pdf-title").textContent = title || "";
+  $("pdf-dl").href = url;
+  $("pdf-jump").value = "";
+  $("pdf-pos").textContent = "";
+  $("pdf-spread").textContent = "";
+  $("pdf-progress-bar").style.width = "0";
+  $("pdf-prev").disabled = $("pdf-next").disabled = true;
+  $("pdf-edge-prev").disabled = $("pdf-edge-next").disabled = true;
+  pdfMsg("പുസ്തകം ലോഡ് ചെയ്യുന്നു...");
+  $("pdf-modal").classList.add("open");
+  document.body.style.overflow = "hidden";
+  try {
+    const lib = await loadPdfJs();
+    if (id !== PR.openId) return;
+    const task = lib.getDocument({ url });
+    task.onProgress = p => {
+      if (id === PR.openId && p.total) $("pdf-progress-bar").style.width = Math.min(100, p.loaded / p.total * 100) + "%";
+    };
+    const pdf = await task.promise;
+    if (id !== PR.openId) { pdf.destroy(); return; }
+    PR.pdf = pdf;
+    PR.n = pdf.numPages;
+    PR.dbl = autoDouble();
+    buildSpreads();
+    updateModeBtn();
+    $("pdf-jump").max = PR.n;
+    pdfMsg("");
+    const start = Math.min(PR.n, pdfLoadPage());
+    const i = PR.spreads.findIndex(s => s.includes(start));
+    showSpread(i < 0 ? 0 : i, 0);
+  } catch (e) {
+    if (id !== PR.openId) return;
+    $("pdf-progress-bar").style.width = "0";
+    const missing = e && (e.name === "MissingPDFException" || e.status === 404);
+    pdfMsg(missing
+      ? "⚠️ ഫയൽ കണ്ടില്ല: " + safeDecode(url.replace(location.origin + "/", ""))
+      : "⚠️ ഈ PDF ഇവിടെ തുറക്കാൻ പറ്റിയില്ല.", url);
+  }
+}
+
+function closePdf() {
+  PR.openId++;
+  resetPdf();
+  $("pdf-modal").classList.remove("open");
+  $("pdf-spread").textContent = "";
+  document.body.style.overflow = "";
+  if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} }
+}
+
+$("pdf-close").onclick = closePdf;
+$("pdf-prev").onclick = $("pdf-edge-prev").onclick = () => pdfStep(-1);
+$("pdf-next").onclick = $("pdf-edge-next").onclick = () => pdfStep(1);
+$("pdf-zoom-in").onclick = () => { PR.zoom = Math.min(3, PR.zoom + 0.25); showSpread(PR.idx, 0); };
+$("pdf-zoom-out").onclick = () => { PR.zoom = Math.max(0.5, PR.zoom - 0.25); showSpread(PR.idx, 0); };
+$("pdf-mode").onclick = () => { PR.manual = true; pdfSetMode(!PR.dbl); };
+$("pdf-jump").addEventListener("keydown", e => {
+  if (e.key === "Enter") { const p = parseInt(e.target.value, 10); if (p) pdfGoto(p); e.target.blur(); }
+});
+if (document.fullscreenEnabled) {
+  $("pdf-full").onclick = () => {
+    try { if (document.fullscreenElement) document.exitFullscreen(); else $("pdf-modal").requestFullscreen(); } catch (e) {}
+  };
+} else { $("pdf-full").style.display = "none"; }
+
+document.addEventListener("keydown", e => {
+  if (!pdfOpenNow() || e.target.tagName === "INPUT") return;
+  const k = e.key;
+  if (PR.zoom > 1 && k.indexOf("Arrow") === 0) return;
+  if (k === "ArrowRight" || k === "PageDown" || k === " ") { e.preventDefault(); pdfStep(1); }
+  else if (k === "ArrowLeft" || k === "PageUp") { e.preventDefault(); pdfStep(-1); }
+  else if (k === "Home") { e.preventDefault(); showSpread(0, -1); }
+  else if (k === "End") { e.preventDefault(); showSpread(PR.spreads.length - 1, 1); }
+});
+
+let swipeX = null, swipeY = null;
+$("pdf-stage").addEventListener("touchstart", e => {
+  if (e.touches.length === 1 && PR.zoom <= 1) { swipeX = e.touches[0].clientX; swipeY = e.touches[0].clientY; }
+  else swipeX = null;
+}, { passive: true });
+$("pdf-stage").addEventListener("touchend", e => {
+  if (swipeX === null) return;
+  const t = e.changedTouches[0];
+  const dx = t.clientX - swipeX, dy = t.clientY - swipeY;
+  swipeX = null;
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) pdfStep(dx < 0 ? 1 : -1);
+}, { passive: true });
+
+buildUI();
+COLLECTIONS.forEach(initCollection);
+initMembers();
+
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const c = COLLECTIONS.find(x => x.id === currentTab);
+    if (c) render(c);
+    pdfOnResize();
+  }, 150);
+});
+</script>
+</body>
+</html>
